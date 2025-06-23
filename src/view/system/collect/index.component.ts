@@ -7,7 +7,7 @@ import { CommonModule } from '@angular/common'
 import { $t } from 'src/locale'
 import { NzMessageService } from 'ng-zorro-antd/message'
 import { NzModalService } from 'ng-zorro-antd/modal'
-import { websiteList, tagMap } from 'src/store'
+import { navs } from 'src/store'
 import { setAuthCode, getAuthCode } from 'src/utils/user'
 import { getUserCollect, delUserCollect, updateFileContent } from 'src/api'
 import { DB_PATH } from 'src/constants'
@@ -44,7 +44,6 @@ export default class CollectComponent {
   submitting: boolean = false
   dataList: Array<any> = []
   authCode = ''
-  tagMap = tagMap
   typeMap: Record<any, string> = {
     [ActionType.Create]: $t('_add'),
     [ActionType.Edit]: $t('_edit'),
@@ -215,6 +214,8 @@ export default class CollectComponent {
       isMove: true,
     })
     event.emit('SET_CREATE_WEB', {
+      parentId: data.parentId,
+      breadcrumb: data.breadcrumb,
       detail: null,
       callback() {
         that.handleDelete(idx)
@@ -228,15 +229,23 @@ export default class CollectComponent {
       nzOnOk: async () => {
         if (await deleteWebByIds([data.id])) {
           this.message.success($t('_delSuccess'))
+        } else {
+          this.message.error('Delete failed')
         }
         this.handleDelete(idx)
       },
     })
   }
 
-  handleUpdateWeb(data: any) {
+  handleUpdateWeb(data: any, idx: number) {
+    const that = this
     event.emit('CREATE_WEB', {
       detail: data,
+    })
+    event.emit('SET_CREATE_WEB', {
+      callback() {
+        that.handleDelete(idx)
+      },
     })
   }
 
@@ -246,7 +255,7 @@ export default class CollectComponent {
     } else if (data.extra.type === ActionType.Delete) {
       this.handleDeleteWeb(data, idx)
     } else if (data.extra.type === ActionType.Edit) {
-      this.handleUpdateWeb(data)
+      this.handleUpdateWeb(data, idx)
     }
   }
 
@@ -263,7 +272,7 @@ export default class CollectComponent {
         this.submitting = true
         updateFileContent({
           message: 'update db',
-          content: JSON.stringify(websiteList),
+          content: JSON.stringify(navs()),
           path: DB_PATH,
         })
           .then(() => {
